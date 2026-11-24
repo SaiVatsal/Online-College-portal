@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>University Student Portal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top Institutional Bar -->
+  <header class="top-nav">
+    <div class="nav-brand">
+      <div class="logo-mark">AIT</div>
+      <div>
+        <span class="portal-title">Apex Institute of Technology</span>
+        <span class="portal-subtitle">Academic Management System</span>
+      </div>
+    </div>
+    <div class="user-session" id="userSession" style="display: none;">
+      <span class="user-badge" id="sessionRoleBadge">Student</span>
+      <span class="user-name" id="sessionUserName">User</span>
+      <button class="btn btn-sm btn-outline" id="logoutBtn" onclick="app.logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- Login View -->
+  <main id="loginView" class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h2>Portal Login</h2>
+        <p>Access your academic records, timetable, and administration tools</p>
+      </div>
+
+      <form id="loginForm" onsubmit="app.handleLogin(event)">
+        <div class="form-group">
+          <label for="usernameInput">Email / User ID</label>
+          <input type="text" id="usernameInput" placeholder="e.g. alex@student.edu" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label for="passwordInput">Password</label>
+          <input type="password" id="passwordInput" placeholder="Enter password" required autocomplete="current-password">
+        </div>
+
+        <div class="form-group">
+          <label for="roleSelect">Sign In As</label>
+          <select id="roleSelect">
+            <option value="student">Student</option>
+            <option value="faculty">Faculty</option>
+            <option value="admin">Administrator</option>
+          </select>
+        </div>
+
+        <div id="loginError" class="alert alert-danger" style="display: none;"></div>
+
+        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+      </form>
+
+      <div class="quick-credentials">
+        <p class="quick-title">Quick Demo Sign-In:</p>
+        <div class="btn-group">
+          <button type="button" class="btn btn-xs" onclick="app.quickFill('student')">Student (Alex)</button>
+          <button type="button" class="btn btn-xs" onclick="app.quickFill('faculty')">Faculty (Dr. Sharma)</button>
+          <button type="button" class="btn btn-xs" onclick="app.quickFill('admin')">Admin (Registrar)</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Authenticated Portal View -->
+  <main id="portalView" class="container" style="display: none;">
+
+    <!-- Navigation Tabs -->
+    <nav class="sub-nav" id="roleNavigation"></nav>
+
+    <!-- Content Sections Container -->
+    <div id="tabContent">
+
+      <!-- ================= STUDENT VIEW ================= -->
+      <section id="student-overview" class="view-pane" style="display: none;">
+        <div class="profile-strip">
+          <div class="profile-info">
+            <h3 id="stdProfileName">-</h3>
+            <p>Roll No: <strong id="stdRollNo">-</strong> | Program: <span id="stdProgram">-</span> | Semester: <strong id="stdSemester">-</strong></p>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span class="metric-label">Cumulative GPA</span>
+              <span class="metric-val" id="stdCgpa">-</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Attendance Rate</span>
+              <span class="metric-val" id="stdAttendanceRate">-</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Registered Credits</span>
+              <span class="metric-val" id="stdCredits">-</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Student: Marks & Courses -->
+      <section id="student-marks" class="view-pane" style="display: none;">
+        <div class="section-header">
+          <div>
+            <h3>Course Grades & Performance</h3>
+            <p class="section-desc">Semester transcript, course codes, internal evaluation, and grade points</p>
+          </div>
+          <button class="btn btn-sm btn-outline" onclick="window.print()">Print Transcript</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Course Name</th>
+                <th>Credits</th>
+                <th>Internal (40)</th>
+                <th>Exam (60)</th>
+                <th>Total (100)</th>
+                <th>Grade</th>
+                <th>Grade Points</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="studentMarksTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Student: Attendance -->
+      <section id="student-attendance" class="view-pane" style="display: none;">
+        <div class="section-header">
+          <div>
+            <h3>Attendance Log</h3>
+            <p class="section-desc">Course-wise lecture hours and minimum attendance requirement (75%)</p>
+          </div>
+          <div id="attendanceWarningNotice"></div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Course Title</th>
+                <th>Faculty</th>
+                <th>Classes Held</th>
+                <th>Classes Attended</th>
+                <th>Percentage</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="studentAttendanceTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Student: Timetable -->
+      <section id="student-timetable" class="view-pane" style="display: none;">
+        <div class="section-header">
+          <div>
+            <h3>Weekly Class Schedule</h3>
+            <p class="section-desc">Academic timetable for active semester</p>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table timetable-table">
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th>09:00 - 10:00</th>
+                <th>10:00 - 11:00</th>
+                <th>11:15 - 12:15</th>
+                <th>13:15 - 14:15</th>
+                <th>14:15 - 15:15</th>
+              </tr>
+            </thead>
+            <tbody id="timetableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Student: Exam Schedule -->
+      <section id="student-exams" class="view-pane" style="display: none;">
+        <div class="section-header">
+          <div>
+            <h3>Examination Datesheet</h3>
+            <p class="section-desc">Schedule for midterm and end-semester tests</p>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Time Slot</th>
+                <th>Course Code</th>
+                <th>Subject</th>
+                <th>Exam Type</th>
+                <th>Room / Hall</th>
+              </tr>
+            </thead>
+            <tbody id="studentExamsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= FACULTY VIEW ================= -->
+      <section id="faculty-attendance" class="view-pane" style="display: none;">
+        <div class="section-header">
+          <div>
+            <h3>Mark Lecture Attendance</h3>
+            <p class="section-desc">Record student attendance session for enrolled courses</p>
+          </div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="form-group inline-group">
+            <label for="facultyCourseSelect">Course:</label>
+            <select id="facultyCourseSelect" onchange="app.renderFacultyAttendanceRoster()"></select>
+          </div>
+          <div class="form-group inline-group">
+            <label for="attendanceDateInput">Lecture Date:</label>
+            <input type="date" id="attendanceDateInput">
+          </div>
+          <div class="form-group inline-group action-group">
+            <button class="btn btn-sm btn-outline" type="button" onclick="app.toggleAllAttendance(true)">Mark All Present</button>
+            <button class="btn btn-sm btn-outline" type="button" onclick="app.toggleAllAttendance(false)">Mark All Absent</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">Status</th>
+                <th>Roll No</th>
+                <th>Student Name</th>
+                <th>Current Attended</th>
+                <th>Current Total</th>
+                <th>Current %</th>
+              </tr>
+            </thead>
+            <tbody id="facultyRosterBody"></tbody>
+          </table>
+        </div>
+
+        <div class="pane-footer">
+          <button class="btn btn-primary" onclick="app.saveFacultyAttendance()">Save & Update Attendance</button>
+          <span id="facultySaveMsg" class="save-indicator"></span>
+        </div>
+      </section>
+
+      <!-- Faculty: Exam Scheduling -->
+      <section id="faculty-exams" class="view-pane" style="display: none;">
+        <div class="section-header">
+          <div>
+            <h3>Schedule Examination / Assessment</h3>
+            <p class="section-desc">Publish midterms, quizzes, and practical schedules</p>
+          </div>
+        </div>
+
+        <div class="grid-two-column">
+          <div class="card">
+            <h4>Add New Exam Schedule</h4>
+            <form id="createExamForm" onsubmit="app.handleScheduleExam(event)">
+              <div class="form-group">
+                <label for="newExamCourse">Course</label>
+                <select id="newExamCourse" required></select>
+              </div>
+              <div class="form-group">
+                <label for="newExamType">Exam Title / Type</label>
+                <select id="newExamType" required>
+                  <option value="Mid-Term Test">Mid-Term Test</option>
+                  <option value="End-Semester Exam">End-Semester Exam</option>
+                  <option value="Lab Practical">Lab Practical</option>
+                  <option value="Class Quiz">Class Quiz</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="newExamDate">Date</label>
+                <input type="date" id="newExamDate" required>
+              </div>
+              <div class="form-group">
+                <label for="newExamTime">Time Slot</label>
+                <input type="text" id="newExamTime" placeholder="e.g. 10:00 AM - 12:00 PM" required>
+              </div>
+              <div class="form-group">
+                <label for="newExamRoom">Hall / Room</label>
+                <input type="text" id="newExamRoom" placeholder="e.g. Hall B-201" required>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block">Add Exam to Schedule</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h4>Current Scheduled Exams</h4>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Code</th>
+                    <th>Type</th>
+                    <th>Time</th>
+                    <th>Room</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="facultyExamsListBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= ADMIN VIEW ================= -->
+      <section id="admin-marks" class="view-pane" style="display: none;">
+        <div class="section-header">
+          <div>
+            <h3>Manage & Assign Student Marks</h3>
+            <p class="section-desc">Edit internal, exam marks, and compute GPA</p>
+          </div>
+          <div class="form-group inline-group">
+            <label for="adminStudentSelect">Select Student:</label>
+            <select id="adminStudentSelect" onchange="app.renderAdminMarksEditor()"></select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Course Name</th>
+                <th>Credits</th>
+                <th>Internal Marks (40)</th>
+                <th>Exam Marks (60)</th>
+                <th>Total (100)</th>
+                <th>Grade</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="adminMarksTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="pane-footer">
+          <button class="btn btn-primary" onclick="app.saveAdminMarks()">Save All Marks</button>
+          <span id="adminMarksSaveMsg" class="save-indicator"></span>
+        </div>
+      </section>
+
+      <!-- Admin: Edit Attendance -->
+      <section id="admin-attendance" class="view-pane" style="display: none;">
+        <div class="section-header">
+          <div>
+            <h3>Attendance Administration & Override</h3>
+            <p class="section-desc">Adjust held and attended lecture counts</p>
+          </div>
+          <div class="form-group inline-group">
+            <label for="adminAttendanceStudentSelect">Select Student:</label>
+            <select id="adminAttendanceStudentSelect" onchange="app.renderAdminAttendanceEditor()"></select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Course Name</th>
+                <th>Held Sessions</th>
+                <th>Attended Sessions</th>
+                <th>Calculated %</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="adminAttendanceTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="pane-footer">
+          <button class="btn btn-primary" onclick="app.saveAdminAttendance()">Save Attendance Changes</button>
+          <span id="adminAttendanceSaveMsg" class="save-indicator"></span>
+        </div>
+      </section>
+
+      <!-- Admin: All Students & CGPA Recalculator -->
+      <section id="admin-students" class="view-pane" style="display: none;">
+        <div class="section-header">
+          <div>
+            <h3>Student Roster & CGPA Ledger</h3>
+            <p class="section-desc">Recalculate CGPA from credits and grade points</p>
+          </div>
+          <button class="btn btn-sm btn-outline" onclick="app.recalculateAllCGPA()">Recalculate All CGPAs</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Roll No</th>
+                <th>Name</th>
+                <th>Program</th>
+                <th>Semester</th>
+                <th>Total Credits</th>
+                <th>CGPA</th>
+                <th>Avg Attendance</th>
+                <th>Quick Action</th>
+              </tr>
+            </thead>
+            <tbody id="adminStudentsRosterBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Admin: Courses & Timetable Settings -->
+      <section id="admin-system" class="view-pane" style="display: none;">
+        <div class="section-header">
+          <div>
+            <h3>System Data Management</h3>
+            <p class="section-desc">Reset or export local database state</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h4>Portal Data Store (Local Storage)</h4>
+          <p>All student marks, exam lists, and attendance data persist locally in your browser.</p>
+          <div class="btn-group" style="margin-top: 1rem;">
+            <button class="btn btn-outline" onclick="app.exportDatabase()">Export Database (JSON)</button>
+            <button class="btn btn-danger" onclick="app.resetDatabase()">Reset to Default Demo Data</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
