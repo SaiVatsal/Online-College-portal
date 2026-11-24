@@ -176,25 +176,13 @@ body {
   margin-top: 0.35rem;
 }
 
-.quick-credentials {
-  margin-top: 1.75rem;
+.auth-toggle-box {
+  margin-top: 1.5rem;
   padding-top: 1.25rem;
-  border-top: 1px dashed var(--border);
-}
-
-.quick-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
+  border-top: 1px solid var(--border-light);
+  text-align: center;
+  font-size: 0.85rem;
   color: var(--text-muted);
-  margin-bottom: 0.5rem;
-  letter-spacing: 0.5px;
-}
-
-.btn-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
 }
 
 /* Forms & Inputs */

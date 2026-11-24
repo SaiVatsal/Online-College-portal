@@ -24,9 +24,10 @@
     </div>
   </header>
 
-  <!-- Login View -->
+  <!-- Login & Register Views -->
   <main id="loginView" class="auth-wrapper">
-    <div class="auth-card">
+    <!-- Sign In Box -->
+    <div class="auth-card" id="signInCard">
       <div class="auth-header">
         <h2>Portal Login</h2>
         <p>Access your academic records, timetable, and administration tools</p>
@@ -35,7 +36,7 @@
       <form id="loginForm" onsubmit="app.handleLogin(event)">
         <div class="form-group">
           <label for="usernameInput">Email / User ID</label>
-          <input type="text" id="usernameInput" placeholder="e.g. alex@student.edu" required autocomplete="username">
+          <input type="text" id="usernameInput" placeholder="Enter your registered email" required autocomplete="username">
         </div>
 
         <div class="form-group">
@@ -43,27 +44,67 @@
           <input type="password" id="passwordInput" placeholder="Enter password" required autocomplete="current-password">
         </div>
 
-        <div class="form-group">
-          <label for="roleSelect">Sign In As</label>
-          <select id="roleSelect">
-            <option value="student">Student</option>
-            <option value="faculty">Faculty</option>
-            <option value="admin">Administrator</option>
-          </select>
-        </div>
-
         <div id="loginError" class="alert alert-danger" style="display: none;"></div>
 
         <button type="submit" class="btn btn-primary btn-block">Sign In</button>
       </form>
 
-      <div class="quick-credentials">
-        <p class="quick-title">Quick Demo Sign-In:</p>
-        <div class="btn-group">
-          <button type="button" class="btn btn-xs" onclick="app.quickFill('student')">Student (Alex)</button>
-          <button type="button" class="btn btn-xs" onclick="app.quickFill('faculty')">Faculty (Dr. Sharma)</button>
-          <button type="button" class="btn btn-xs" onclick="app.quickFill('admin')">Admin (Registrar)</button>
+      <div class="auth-toggle-box">
+        <span>Don't have an account?</span>
+        <button type="button" class="btn btn-outline btn-block" style="margin-top: 0.6rem;" onclick="app.showRegisterView()">Create a New Account</button>
+      </div>
+    </div>
+
+    <!-- Create Account Box -->
+    <div class="auth-card" id="registerCard" style="display: none;">
+      <div class="auth-header">
+        <h2>Create an Account</h2>
+        <p>Register as a new student or faculty member</p>
+      </div>
+
+      <form id="registerForm" onsubmit="app.handleRegister(event)">
+        <div class="form-group">
+          <label for="regRole">Account Type</label>
+          <select id="regRole" onchange="app.handleRegRoleChange()">
+            <option value="student">Student</option>
+            <option value="faculty">Faculty Member</option>
+          </select>
         </div>
+
+        <div class="form-group">
+          <label for="regName">Full Name</label>
+          <input type="text" id="regName" placeholder="e.g. John Doe" required>
+        </div>
+
+        <div class="form-group">
+          <label for="regEmail">Email Address</label>
+          <input type="email" id="regEmail" placeholder="e.g. john@student.edu" required>
+        </div>
+
+        <div class="form-group">
+          <label for="regIdentifier" id="regIdentifierLabel">Roll Number</label>
+          <input type="text" id="regIdentifier" placeholder="e.g. CS-2024-050" required>
+        </div>
+
+        <div class="form-group" id="regProgramGroup">
+          <label for="regProgram" id="regProgramLabel">Academic Program</label>
+          <input type="text" id="regProgram" placeholder="e.g. B.Tech Computer Science" required>
+        </div>
+
+        <div class="form-group">
+          <label for="regPassword">Password</label>
+          <input type="password" id="regPassword" placeholder="Create password" required minlength="4">
+        </div>
+
+        <div id="registerError" class="alert alert-danger" style="display: none;"></div>
+        <div id="registerSuccess" class="alert alert-success" style="display: none;"></div>
+
+        <button type="submit" class="btn btn-primary btn-block">Register & Sign In</button>
+      </form>
+
+      <div class="auth-toggle-box">
+        <span>Already have an account?</span>
+        <button type="button" class="btn btn-outline btn-block" style="margin-top: 0.6rem;" onclick="app.showLoginView()">Back to Sign In</button>
       </div>
     </div>
   </main>

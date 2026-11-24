@@ -9,6 +9,8 @@ const STORAGE_KEY = 'AIT_PORTAL_DATA_V1';
 const DEFAULT_DATA = {
   users: [
     { username: 'alex@student.edu', password: 'student123', role: 'student', studentId: 'S101', name: 'Alex Rivera' },
+    { username: 'priya@student.edu', password: 'student123', role: 'student', studentId: 'S102', name: 'Priya Patel' },
+    { username: 'marcus@student.edu', password: 'student123', role: 'student', studentId: 'S103', name: 'Marcus Chen' },
     { username: 'dr.sharma@faculty.edu', password: 'faculty123', role: 'faculty', facultyId: 'F201', name: 'Dr. R. Sharma' },
     { username: 'admin@portal.edu', password: 'admin123', role: 'admin', name: 'Registrar Admin' }
   ],
@@ -127,7 +129,14 @@ class StudentPortalApp {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        if (!parsed.users) parsed.users = [];
+        DEFAULT_DATA.users.forEach(defUser => {
+          if (!parsed.users.some(u => u.username.toLowerCase() === defUser.username.toLowerCase())) {
+            parsed.users.push(defUser);
+          }
+        });
+        return parsed;
       }
     } catch (e) {
       console.warn('LocalStorage unavailable or corrupted, loading default state', e);
@@ -159,31 +168,135 @@ class StudentPortalApp {
     this.showLoginView();
   }
 
-  // Quick Sign-In Helpers for Demo
-  quickFill(role) {
-    const creds = {
-      student: { u: 'alex@student.edu', p: 'student123' },
-      faculty: { u: 'dr.sharma@faculty.edu', p: 'faculty123' },
-      admin: { u: 'admin@portal.edu', p: 'admin123' }
-    };
-    if (creds[role]) {
-      document.getElementById('usernameInput').value = creds[role].u;
-      document.getElementById('passwordInput').value = creds[role].p;
-      document.getElementById('roleSelect').value = role;
+  // Switch between Sign In and Registration cards
+  showRegisterView() {
+    document.getElementById('signInCard').style.display = 'none';
+    document.getElementById('registerCard').style.display = 'block';
+    document.getElementById('registerError').style.display = 'none';
+    document.getElementById('registerSuccess').style.display = 'none';
+    document.getElementById('registerForm').reset();
+    this.handleRegRoleChange();
+  }
+
+  showLoginView() {
+    document.getElementById('loginView').style.display = 'flex';
+    document.getElementById('portalView').style.display = 'none';
+    document.getElementById('userSession').style.display = 'none';
+    document.getElementById('signInCard').style.display = 'block';
+    const regCard = document.getElementById('registerCard');
+    if (regCard) regCard.style.display = 'none';
+    const uInput = document.getElementById('usernameInput');
+    const pInput = document.getElementById('passwordInput');
+    if (uInput) uInput.value = '';
+    if (pInput) pInput.value = '';
+    const err = document.getElementById('loginError');
+    if (err) err.style.display = 'none';
+  }
+
+  handleRegRoleChange() {
+    const role = document.getElementById('regRole').value;
+    const idLabel = document.getElementById('regIdentifierLabel');
+    const idInput = document.getElementById('regIdentifier');
+    const progLabel = document.getElementById('regProgramLabel');
+    const progInput = document.getElementById('regProgram');
+
+    if (role === 'faculty') {
+      idLabel.textContent = 'Faculty / Staff ID';
+      idInput.placeholder = 'e.g. FAC-2024-012';
+      progLabel.textContent = 'Department';
+      progInput.placeholder = 'e.g. Department of Computer Science';
+    } else {
+      idLabel.textContent = 'Roll Number';
+      idInput.placeholder = 'e.g. CS-2024-050';
+      progLabel.textContent = 'Academic Program';
+      progInput.placeholder = 'e.g. B.Tech Computer Science';
     }
   }
 
+  handleRegister(e) {
+    e.preventDefault();
+    const role = document.getElementById('regRole').value;
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim().toLowerCase();
+    const identifier = document.getElementById('regIdentifier').value.trim();
+    const program = document.getElementById('regProgram').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const errBox = document.getElementById('registerError');
+    const succBox = document.getElementById('registerSuccess');
+
+    errBox.style.display = 'none';
+    succBox.style.display = 'none';
+
+    // Check if user already exists
+    const exists = this.data.users.some(u => u.username.toLowerCase() === email);
+    if (exists) {
+      errBox.textContent = 'An account with this email address already exists. Please sign in instead.';
+      errBox.style.display = 'block';
+      return;
+    }
+
+    let newUser = null;
+
+    if (role === 'student') {
+      const studentId = 'S' + Math.floor(1000 + Math.random() * 9000);
+      const newStudent = {
+        id: studentId,
+        rollNo: identifier,
+        name: name,
+        email: email,
+        program: program,
+        semester: 'Semester 1',
+        cgpa: 0.00
+      };
+
+      this.data.students.push(newStudent);
+
+      // Initialize default zero marks and attendance for courses
+      if (!this.data.marks[studentId]) this.data.marks[studentId] = {};
+      if (!this.data.attendance[studentId]) this.data.attendance[studentId] = {};
+
+      this.data.courses.forEach(c => {
+        this.data.marks[studentId][c.code] = { internal: 0, exam: 0 };
+        this.data.attendance[studentId][c.code] = { held: 0, attended: 0 };
+      });
+
+      newUser = {
+        username: email,
+        password: password,
+        role: 'student',
+        studentId: studentId,
+        name: name
+      };
+    } else {
+      const facultyId = 'F' + Math.floor(1000 + Math.random() * 9000);
+      newUser = {
+        username: email,
+        password: password,
+        role: 'faculty',
+        facultyId: facultyId,
+        name: name
+      };
+    }
+
+    this.data.users.push(newUser);
+    this.saveData();
+
+    // Auto login as newly registered user
+    sessionStorage.setItem('AIT_PORTAL_SESSION', JSON.stringify(newUser));
+    this.loginUser(newUser);
+  }
+
+  // Automatic role detection upon sign in
   handleLogin(e) {
     e.preventDefault();
-    const u = document.getElementById('usernameInput').value.trim();
+    const u = document.getElementById('usernameInput').value.trim().toLowerCase();
     const p = document.getElementById('passwordInput').value.trim();
-    const r = document.getElementById('roleSelect').value;
     const errBox = document.getElementById('loginError');
 
+    // Auto-detect role from matched user credentials
     const matched = this.data.users.find(user => 
-      user.username.toLowerCase() === u.toLowerCase() && 
-      user.password === p && 
-      user.role === r
+      user.username.toLowerCase() === u && 
+      user.password === p
     );
 
     if (matched) {
@@ -191,7 +304,7 @@ class StudentPortalApp {
       sessionStorage.setItem('AIT_PORTAL_SESSION', JSON.stringify(matched));
       this.loginUser(matched);
     } else {
-      errBox.textContent = 'Invalid credentials or role mismatch. Please verify email and password.';
+      errBox.textContent = 'Invalid email or password. Please verify your credentials.';
       errBox.style.display = 'block';
     }
   }
