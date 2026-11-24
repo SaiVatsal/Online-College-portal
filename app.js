@@ -4,6 +4,8 @@
  */
 
 const STORAGE_KEY = 'AIT_PORTAL_DATA_V1';
+const SESSION_STORAGE_KEY = 'AIT_PORTAL_ACTIVE_SESSION';
+const TAB_STORAGE_KEY = 'AIT_PORTAL_ACTIVE_TAB';
 
 // Initial Seed Database
 const DEFAULT_DATA = {
@@ -124,7 +126,7 @@ class StudentPortalApp {
     this.init();
   }
 
-  // Load and sync localStorage
+  // Load and sync localStorage with fallback
   loadData() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -136,13 +138,27 @@ class StudentPortalApp {
             parsed.users.push(defUser);
           }
         });
+        if (!parsed.students) parsed.students = JSON.parse(JSON.stringify(DEFAULT_DATA.students));
+        if (!parsed.courses) parsed.courses = JSON.parse(JSON.stringify(DEFAULT_DATA.courses));
+        if (!parsed.marks) parsed.marks = JSON.parse(JSON.stringify(DEFAULT_DATA.marks));
+        if (!parsed.attendance) parsed.attendance = JSON.parse(JSON.stringify(DEFAULT_DATA.attendance));
+        if (!parsed.timetable) parsed.timetable = JSON.parse(JSON.stringify(DEFAULT_DATA.timetable));
+        if (!parsed.exams) parsed.exams = JSON.parse(JSON.stringify(DEFAULT_DATA.exams));
+
+        // Save back synchronized version so everything is preserved
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        } catch (e) {}
         return parsed;
       }
     } catch (e) {
       console.warn('LocalStorage unavailable or corrupted, loading default state', e);
     }
-    this.saveData(DEFAULT_DATA);
-    return JSON.parse(JSON.stringify(DEFAULT_DATA));
+    const fresh = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+    } catch (e) {}
+    return fresh;
   }
 
   saveData(dataToSave = this.data) {
@@ -154,15 +170,23 @@ class StudentPortalApp {
   }
 
   init() {
-    // Check if session exists in sessionStorage
-    const savedSession = sessionStorage.getItem('AIT_PORTAL_SESSION');
+    // Check if session exists in localStorage or sessionStorage (persists across refresh)
+    let savedSession = null;
+    try {
+      savedSession = localStorage.getItem(SESSION_STORAGE_KEY) || sessionStorage.getItem('AIT_PORTAL_SESSION');
+    } catch (e) {}
+
     if (savedSession) {
       try {
         const user = JSON.parse(savedSession);
-        this.loginUser(user);
+        const liveUser = this.data.users.find(u => u.username.toLowerCase() === user.username.toLowerCase()) || user;
+        this.loginUser(liveUser);
         return;
       } catch (e) {
-        sessionStorage.removeItem('AIT_PORTAL_SESSION');
+        try {
+          localStorage.removeItem(SESSION_STORAGE_KEY);
+          sessionStorage.removeItem('AIT_PORTAL_SESSION');
+        } catch (err) {}
       }
     }
     this.showLoginView();
@@ -281,8 +305,11 @@ class StudentPortalApp {
     this.data.users.push(newUser);
     this.saveData();
 
-    // Auto login as newly registered user
-    sessionStorage.setItem('AIT_PORTAL_SESSION', JSON.stringify(newUser));
+    // Auto login as newly registered user and persist across reloads
+    try {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newUser));
+      sessionStorage.setItem('AIT_PORTAL_SESSION', JSON.stringify(newUser));
+    } catch (e) {}
     this.loginUser(newUser);
   }
 
@@ -301,7 +328,10 @@ class StudentPortalApp {
 
     if (matched) {
       errBox.style.display = 'none';
-      sessionStorage.setItem('AIT_PORTAL_SESSION', JSON.stringify(matched));
+      try {
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(matched));
+        sessionStorage.setItem('AIT_PORTAL_SESSION', JSON.stringify(matched));
+      } catch (e) {}
       this.loginUser(matched);
     } else {
       errBox.textContent = 'Invalid email or password. Please verify your credentials.';
@@ -311,6 +341,11 @@ class StudentPortalApp {
 
   loginUser(user) {
     this.currentUser = user;
+    try {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
+      sessionStorage.setItem('AIT_PORTAL_SESSION', JSON.stringify(user));
+    } catch (e) {}
+
     document.getElementById('loginView').style.display = 'none';
     document.getElementById('portalView').style.display = 'block';
     document.getElementById('userSession').style.display = 'flex';
@@ -323,7 +358,11 @@ class StudentPortalApp {
 
   logout() {
     this.currentUser = null;
-    sessionStorage.removeItem('AIT_PORTAL_SESSION');
+    try {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      localStorage.removeItem(TAB_STORAGE_KEY);
+      sessionStorage.removeItem('AIT_PORTAL_SESSION');
+    } catch (e) {}
     document.getElementById('portalView').style.display = 'none';
     document.getElementById('userSession').style.display = 'none';
     this.showLoginView();
@@ -338,7 +377,7 @@ class StudentPortalApp {
     document.getElementById('loginError').style.display = 'none';
   }
 
-  // Navigation Tabs construction based on user role
+  // Navigation Tabs construction based on user role (remembers active tab across reload)
   buildNavigationTabs(role) {
     const nav = document.getElementById('roleNavigation');
     nav.innerHTML = '';
@@ -366,21 +405,33 @@ class StudentPortalApp {
       ];
     }
 
-    tabs.forEach((t, idx) => {
+    let savedTab = null;
+    try {
+      savedTab = localStorage.getItem(TAB_STORAGE_KEY);
+    } catch (e) {}
+
+    const initialTabId = (savedTab && tabs.some(t => t.id === savedTab)) ? savedTab : (tabs[0] ? tabs[0].id : null);
+
+    tabs.forEach(t => {
       const btn = document.createElement('button');
-      btn.className = `nav-tab ${idx === 0 ? 'active' : ''}`;
+      btn.className = `nav-tab ${t.id === initialTabId ? 'active' : ''}`;
       btn.textContent = t.label;
       btn.onclick = () => this.switchTab(t.id, btn);
       nav.appendChild(btn);
     });
 
-    if (tabs.length > 0) {
-      this.switchTab(tabs[0].id, nav.children[0]);
+    if (initialTabId) {
+      const activeBtn = Array.from(nav.children).find(b => b.classList.contains('active'));
+      this.switchTab(initialTabId, activeBtn);
     }
   }
 
   switchTab(tabId, tabButton) {
     this.activeTab = tabId;
+    try {
+      localStorage.setItem(TAB_STORAGE_KEY, tabId);
+    } catch (e) {}
+
     document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
     if (tabButton) tabButton.classList.add('active');
 
@@ -576,10 +627,26 @@ class StudentPortalApp {
       courseSelect.appendChild(opt);
     });
 
+    let savedCourse = null;
+    try {
+      savedCourse = localStorage.getItem('AIT_FACULTY_SELECTED_COURSE');
+    } catch (e) {}
+    if (savedCourse && this.data.courses.some(c => c.code === savedCourse)) {
+      courseSelect.value = savedCourse;
+    }
+
     // Default to today's date
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('attendanceDateInput').value = today;
 
+    this.renderFacultyAttendanceRoster();
+  }
+
+  onFacultyCourseSelectChange() {
+    const courseSelect = document.getElementById('facultyCourseSelect');
+    try {
+      localStorage.setItem('AIT_FACULTY_SELECTED_COURSE', courseSelect.value);
+    } catch (e) {}
     this.renderFacultyAttendanceRoster();
   }
 
@@ -710,6 +777,23 @@ class StudentPortalApp {
       sel.appendChild(opt);
     });
 
+    let savedStudentId = null;
+    try {
+      savedStudentId = localStorage.getItem('AIT_ADMIN_SELECTED_STUDENT');
+    } catch (e) {}
+
+    if (savedStudentId && this.data.students.some(s => s.id === savedStudentId)) {
+      sel.value = savedStudentId;
+    }
+
+    this.renderAdminMarksEditor();
+  }
+
+  onAdminStudentSelectChange() {
+    const sel = document.getElementById('adminStudentSelect');
+    try {
+      localStorage.setItem('AIT_ADMIN_SELECTED_STUDENT', sel.value);
+    } catch (e) {}
     this.renderAdminMarksEditor();
   }
 
@@ -746,6 +830,7 @@ class StudentPortalApp {
   }
 
   handleLiveMarksChange(courseCode) {
+    const studentId = document.getElementById('adminStudentSelect').value;
     const intInput = document.querySelector(`.admin-internal-input[data-course="${courseCode}"]`);
     const exInput = document.querySelector(`.admin-exam-input[data-course="${courseCode}"]`);
     const totalEl = document.getElementById(`adm-total-${courseCode}`);
@@ -758,6 +843,22 @@ class StudentPortalApp {
     totalEl.textContent = info.total;
     gradeEl.textContent = info.grade;
     gradeEl.className = `badge ${info.status === 'Pass' ? 'badge-pass' : 'badge-fail'}`;
+
+    // Auto-commit to data and immediately save to localStorage
+    if (!this.data.marks[studentId]) this.data.marks[studentId] = {};
+    this.data.marks[studentId][courseCode] = { internal: intVal, exam: exVal };
+
+    const updatedCgpa = this.calculateStudentCGPA(studentId);
+    const targetStudent = this.data.students.find(s => s.id === studentId);
+    if (targetStudent) targetStudent.cgpa = updatedCgpa;
+
+    this.saveData();
+
+    const msg = document.getElementById('adminMarksSaveMsg');
+    if (msg) {
+      msg.textContent = 'Auto-saved';
+      setTimeout(() => { if (msg.textContent === 'Auto-saved') msg.textContent = ''; }, 2000);
+    }
   }
 
   resetCourseMarks(studentId, courseCode) {
@@ -790,7 +891,7 @@ class StudentPortalApp {
     this.saveData();
 
     const msg = document.getElementById('adminMarksSaveMsg');
-    msg.textContent = `Marks updated successfully! New CGPA: ${updatedCgpa.toFixed(2)}`;
+    msg.textContent = `All marks saved! CGPA: ${updatedCgpa.toFixed(2)}`;
     setTimeout(() => { msg.textContent = ''; }, 3500);
   }
 
@@ -804,6 +905,23 @@ class StudentPortalApp {
       sel.appendChild(opt);
     });
 
+    let savedStudentId = null;
+    try {
+      savedStudentId = localStorage.getItem('AIT_ADMIN_ATT_STUDENT');
+    } catch (e) {}
+
+    if (savedStudentId && this.data.students.some(s => s.id === savedStudentId)) {
+      sel.value = savedStudentId;
+    }
+
+    this.renderAdminAttendanceEditor();
+  }
+
+  onAdminAttendanceStudentSelectChange() {
+    const sel = document.getElementById('adminAttendanceStudentSelect');
+    try {
+      localStorage.setItem('AIT_ADMIN_ATT_STUDENT', sel.value);
+    } catch (e) {}
     this.renderAdminAttendanceEditor();
   }
 
@@ -838,15 +956,28 @@ class StudentPortalApp {
   }
 
   handleLiveAttChange(courseCode) {
+    const studentId = document.getElementById('adminAttendanceStudentSelect').value;
     const heldInput = document.querySelector(`.admin-held-input[data-course="${courseCode}"]`);
     const attInput = document.querySelector(`.admin-attended-input[data-course="${courseCode}"]`);
     const pctEl = document.getElementById(`adm-att-pct-${courseCode}`);
 
     const held = Math.max(0, Number(heldInput.value) || 0);
-    const attended = Math.max(0, Number(attInput.value) || 0);
+    const attended = Math.min(held, Math.max(0, Number(attInput.value) || 0));
 
     const pct = held > 0 ? ((attended / held) * 100).toFixed(1) : 100;
     pctEl.textContent = `${pct}%`;
+
+    // Auto-commit to data and immediately save to localStorage
+    if (!this.data.attendance[studentId]) this.data.attendance[studentId] = {};
+    this.data.attendance[studentId][courseCode] = { held, attended };
+
+    this.saveData();
+
+    const msg = document.getElementById('adminAttendanceSaveMsg');
+    if (msg) {
+      msg.textContent = 'Auto-saved';
+      setTimeout(() => { if (msg.textContent === 'Auto-saved') msg.textContent = ''; }, 2000);
+    }
   }
 
   setFullAttendance(courseCode) {

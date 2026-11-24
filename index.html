@@ -11,10 +11,10 @@
   <!-- Top Institutional Bar -->
   <header class="top-nav">
     <div class="nav-brand">
-      <div class="logo-mark">AIT</div>
+      <div class="logo-mark">VIT</div>
       <div>
-        <span class="portal-title">Apex Institute of Technology</span>
-        <span class="portal-subtitle">Academic Management System</span>
+        <span class="portal-title">Vajju's instution of technology</span>
+        <span class="portal-subtitle">Academics Student managemeny</span>
       </div>
     </div>
     <div class="user-session" id="userSession" style="display: none;">
@@ -264,7 +264,7 @@
         <div class="filter-bar">
           <div class="form-group inline-group">
             <label for="facultyCourseSelect">Course:</label>
-            <select id="facultyCourseSelect" onchange="app.renderFacultyAttendanceRoster()"></select>
+            <select id="facultyCourseSelect" onchange="app.onFacultyCourseSelectChange()"></select>
           </div>
           <div class="form-group inline-group">
             <label for="attendanceDateInput">Lecture Date:</label>
@@ -370,7 +370,7 @@
           </div>
           <div class="form-group inline-group">
             <label for="adminStudentSelect">Select Student:</label>
-            <select id="adminStudentSelect" onchange="app.renderAdminMarksEditor()"></select>
+            <select id="adminStudentSelect" onchange="app.onAdminStudentSelectChange()"></select>
           </div>
         </div>
 
@@ -407,7 +407,7 @@
           </div>
           <div class="form-group inline-group">
             <label for="adminAttendanceStudentSelect">Select Student:</label>
-            <select id="adminAttendanceStudentSelect" onchange="app.renderAdminAttendanceEditor()"></select>
+            <select id="adminAttendanceStudentSelect" onchange="app.onAdminAttendanceStudentSelectChange()"></select>
           </div>
         </div>
 
